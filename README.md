@@ -1,4 +1,3 @@
-# scRNA_project
 # Single-cell RNA-seq Example Project
 
 This is a toy example of single-cell RNA-seq analysis using **Seurat** in R.
