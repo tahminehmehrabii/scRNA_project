@@ -1,7 +1,6 @@
 
 ############################################################
 # Full single-cell pipeline for LSCC (GSE150321) - STEPWISE
-# Each stage saves CSV / image / RDS outputs
 ############################################################
 
 suppressPackageStartupMessages({
@@ -609,7 +608,7 @@ only_pos_genes      <- FALSE   # both up and down
 }
 
 ## ====================== Stage 11 ======================
-.say("############################################################\n[Stage11] Epithelial labels — Malignant vs Keratinocyte_like\n############################################################")
+.say("\n[Stage11] Epithelial labels — Malignant vs Keratinocyte_like\n")
 if (!exists("epith_obj") || is.null(epith_obj)) {
   stop("epith_obj does not exist. Cannot run Stage11/12.")
 }
@@ -629,7 +628,7 @@ message("  Keratinocyte_like clusters: {", paste(picks_ep$B, collapse=", "), "}"
 .say("Stage11 finished — the following files were saved:\n - ..._Stage11_Epithelial_Malignant_vs_KeratinocyteLike_cells.csv\n - ..._Stage11_Epithelial_Malignant_vs_KeratinocyteLike_autoSelection.csv")
 
 ## ====================== Stage 12 ======================
-.say("############################################################\n[Stage12] Epithelial DEGs — Malignant vs Keratinocyte_like (strict)\n############################################################")
+.say("\n[Stage12] Epithelial DEGs — Malignant vs Keratinocyte_like (strict)\n")
 
 # Apply Stage 11 labels and run strict DEG
 lab_ep <- file.path(data_dir, paste0(project_id, "_Stage11_Epithelial_Malignant_vs_KeratinocyteLike_cells.csv"))
@@ -643,3 +642,4 @@ if (!is.null(epi_sub)) {
 }
 
 .say("Stage12 finished — DEG table and group counts were saved.")
+
