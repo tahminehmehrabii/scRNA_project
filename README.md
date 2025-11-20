@@ -1,4 +1,4 @@
-# Single-cell RNA-seq Example Project
+# Single-cell RNA-seq  Project
 ## LSCC scRNA-seq Pipeline Overview (Seurat, R)
 
 This repository contains a fully scripted single-cell RNA-seq pipeline for LSCC (GSE150321) implemented in R/Seurat.  
