@@ -1,89 +1,215 @@
-# Single-cell RNA-seq  Project
-## LSCC scRNA-seq Pipeline Overview (Seurat, R)
+# LSCC Single-Cell RNA-seq Analysis and Refined inferCNV Pipeline
 
-This repository contains a fully scripted single-cell RNA-seq pipeline for LSCC (GSE150321) implemented in R/Seurat.  
-Each stage saves intermediate CSV/PNG/RDS outputs for reproducibility.
+This repository contains an R-based single-cell RNA-seq workflow for the analysis of laryngeal squamous cell carcinoma (LSCC) samples from **GSE206332**. The pipeline integrates quality control, clustering, cell-type annotation, CNV-based malignant-cell identification, malignant subclustering, refined inferCNV analysis, and High-CNV marker discovery.
 
-### Stage 0 – Setup
-- Parse command-line arguments (`data_dir`, `project_id`) and set working directory.
-- Load required libraries (Seurat, data.table, dplyr, ggplot2).
+## **Dataset**
 
-### Stage 1 – Load raw data
-- Scan `data_dir` for per-sample `.csv.gz` files.
-- For each sample: read count matrix, create `Seurat` object, attach `sample_id`.
-- Save raw cell counts per sample (`*_Stage1_raw_cell_counts.csv`).
+* **Dataset:** GSE206332
+* **Samples:** GSM6251294, GSM6251297, and GSM6251300
+* **Disease:** Laryngeal squamous cell carcinoma (LSCC)
+* **Data type:** 10x Genomics single-cell RNA-seq data
 
-### Stage 2 – Quality control (per sample)
-- Compute `nFeature_RNA`, `nCount_RNA`, and mitochondrial percentage (`percent.mt`).
-- Filter cells using hard thresholds (e.g. 200–7500 genes, 400–40000 UMIs, <20% MT).
-- Save post-QC cell counts per sample (`*_Stage2_postQC_cell_counts.csv`).
+## **Required R Packages**
 
-### Stage 3 – Merge samples
-- Merge all QC-filtered Seurat objects into one multi-sample object.
-- Join layers (Seurat v5), set `RNA` as default assay.
-- Save merged metadata and Seurat object:
-  - `*_Stage3_meta_merged.csv`
-  - `*_Stage3_merged_seurat.rds`
+The pipeline requires the following R packages:
 
-### Stage 4 – Normalization & PCA
-- Normalize data and select highly variable genes (HVGs, `vst`, 3000 genes).
-- Save HVG list (`*_Stage4_HVG_genes.csv`).
-- Scale data on HVGs and run PCA.
-- Export PCA elbow plot (`*_Stage4_PCA_Elbow.png`) and post-PCA object (`*_Stage4_postPCA_seurat.rds`).
+```r
+Seurat
+SeuratObject
+Matrix
+data.table
+dplyr
+ggplot2
+harmony
+infercnv
+patchwork
+pheatmap
+grid
+png
+ggrepel
+```
 
-### Stage 5 – Graph clustering & UMAP
-- Build kNN graph (`FindNeighbors`) and perform clustering (`FindClusters`, res = 0.5).
-- Run UMAP on selected PCs.
-- Generate UMAPs:
-  - By cluster (`*_Stage5_UMAP_clusters.png`)
-  - By sample (`*_Stage5_UMAP_samples.png`)
-- Save metadata with clusters and Seurat object:
-  - `*_Stage5_meta_with_clusters.csv`
-  - `*_Stage5_postUMAP_seurat.rds`
+## **Analysis Workflow**
 
-### Stage 6 – Cluster marker genes
-- Run `FindAllMarkers` across clusters (up- and down-regulated genes).
-- Add direction column based on log2FC (up vs down).
-- Save global marker table (`*_Stage6_cluster_markers_global_up_down.csv`).
+### **1. Environment Setup**
 
-### Stage 7 – Canonical lineage markers (DotPlot)
-- Define curated marker panels for:
-  - T cells, B/plasma cells, myeloid cells, tumor/epithelial, fibroblasts/CAF, endothelial, proliferation, mast, NK/cytotoxic, TAM/SPP1+ macrophages.
-- Filter to markers present in the dataset and save panel (`*_Stage7_marker_panel_used.csv`).
-- Plot DotPlot of marker expression across clusters (`*_Stage7_lineage_DotPlot.png`).
+The script clears the R environment, defines global options, sets a random seed, loads required packages, and creates output directories for figures, RDS objects, and inferCNV results.
 
-### Stage 8 – Map clusters to major cell types
-- Manually map `seurat_clusters` to major lineages:
-  - Tumor/Epithelial, T cells, B/Plasma cells, Myeloid, Fibroblasts, Endothelial.
-- Store mapping in `celltype_main` and visualize UMAP by cell type:
-  - `*_Stage8_UMAP_celltypes.png`
-- Save updated metadata (`*_Stage8_meta_with_celltypes.csv`).
+### **2. Input Data Preparation**
 
-### Stage 9 – Lineage-specific sub-pipelines
-- For each major lineage (T cells, B cells, myeloid, epithelial tumor, fibroblasts, endothelial):
-  - Subset cells of that lineage.
-  - Re-run normalization, HVG selection, scaling, PCA, neighbors, clustering, and UMAP.
-  - Export:
-    - UMAP by cluster and sample (`*_Stage9_<Lineage>_UMAP_*.png`)
-    - Lineage-specific marker genes (`*_Stage9_<Lineage>_markers.csv`)
-    - Lineage metadata (`*_Stage9_<Lineage>_meta.csv`)
-    - Lineage Seurat object (`*_Stage9_<Lineage>_seurat.rds`).
+Raw 10x Genomics files, including the matrix, barcode, and feature files, are loaded for each LSCC sample. Gene-order information based on the hg38 reference genome is used for inferCNV analysis.
 
-### Stage 10 – Global annotated object
-- Save final global Seurat object with cluster and cell-type annotations:
-  - `*_Stage10_Global_annotated_seurat.rds`.
+### **3. Quality Control**
 
-### Stage 11 – Epithelial labeling (Malignant vs Keratinocyte-like)
-- Use predefined marker sets for malignant and keratinocyte-like programs.
-- Compute module scores per cluster and automatically assign clusters to:
-  - `Malignant` vs `Keratinocyte_like`.
-- Save:
-  - Per-cell labels (`*_Stage11_Epithelial_Malignant_vs_KeratinocyteLike_cells.csv`)
-  - Cluster-level scores (`*_Stage11_Epithelial_Malignant_vs_KeratinocyteLike_autoSelection.csv`).
+Cells are filtered according to the following criteria:
 
-### Stage 12 – Epithelial DEGs (Malignant vs Keratinocyte-like)
-- Apply labels from Stage 11 and subset epithelial tumor object.
-- Run strict differential expression (Wilcoxon, log2FC and detection filters).
-- Save:
-  - Group cell counts (`*_Stage12_Epithelial_Malignant_vs_KeratinocyteLike_DEGs_group_counts.csv`)
-  - DEG table with direction (`*_Stage12_Epithelial_Malignant_vs_KeratinocyteLike_DEGs.csv`).
+* Retain cells with at least **200 detected genes**.
+* Remove cells with mitochondrial transcript percentages of **20% or higher**.
+* Generate a QC summary table showing cell counts before and after filtering.
+
+### **4. Data Integration and Dimensionality Reduction**
+
+Filtered samples are merged and processed using the following steps:
+
+* Log-normalization of gene-expression data.
+* Identification of 2,000 highly variable genes.
+* Scaling of gene-expression values.
+* Principal component analysis (PCA).
+* Harmony batch correction based on sample identity.
+* Graph-based clustering and t-SNE visualization.
+
+### **5. Global Cluster Marker Detection**
+
+Differential-expression analysis is performed across global cell clusters using `FindAllMarkers`. A dedicated differential-expression assay is generated to avoid layer-related issues in Seurat v5.
+
+Marker tables are exported for:
+
+* All detected cluster markers.
+* Statistically significant global cluster markers.
+
+### **6. Cell-Type Annotation**
+
+Major cell populations are annotated using canonical marker genes and module-score analysis.
+
+The annotated cell types include:
+
+* B cells
+* Endothelial cells
+* Epithelial cells
+* Fibroblasts
+* Myeloid cells
+* NK cells
+* T cells
+
+t-SNE plots and marker DotPlots are generated to visualize cell-type assignments.
+
+### **7. Initial inferCNV Analysis**
+
+Initial inferCNV analysis is performed separately for each sample.
+
+* **Epithelial cells** are evaluated as potential malignant populations.
+* **Myeloid cells** are used as the reference population.
+* CNV scores are calculated from inferCNV expression profiles.
+* Epithelial cells with CNV scores above the 95th percentile of reference myeloid cells are classified as malignant-like cells.
+
+### **8. Malignant Cell Re-Clustering**
+
+Malignant epithelial cells are extracted and re-clustered to investigate intratumoral heterogeneity.
+
+The workflow includes:
+
+* Normalization and variable-feature selection.
+* PCA and graph-based clustering.
+* t-SNE visualization of malignant epithelial subclusters.
+* Calculation of initial CNV-score summaries for each malignant subcluster.
+
+### **9. Low-CNV Reference Cluster Selection**
+
+Weak or low-CNV malignant subclusters are identified using the initial CNV-score distribution.
+
+The script supports two approaches:
+
+* **Automatic selection:** Clusters in the lowest CNV-score quartile are selected.
+* **Manual selection:** Users can specify low-CNV clusters after inspecting the initial CNV violin plot.
+
+Selected low-CNV clusters are used as internal reference populations for refined inferCNV analysis.
+
+### **10. Refined inferCNV Analysis**
+
+Refined inferCNV is performed using the selected low-CNV malignant subclusters as reference groups.
+
+This step includes:
+
+* Generation of refined CNV scores.
+* Classification of malignant subclusters as Low-CNV or High-CNV.
+* Visualization of refined CNV-score distributions.
+* Export of inferCNV heatmaps and CNV summary tables.
+
+### **11. High-CNV Malignant Cell Selection**
+
+Low-CNV malignant subclusters are removed after refined inferCNV analysis.
+
+The remaining cells represent High-CNV malignant epithelial populations and are used for downstream marker identification.
+
+### **12. High-CNV Marker Gene Identification**
+
+Cluster-specific marker genes are identified among the remaining High-CNV malignant subclusters.
+
+Markers are retained using the following criteria:
+
+* `avg_log2FC ≥ 1`
+* `min.pct ≥ 0.25`
+* Adjusted `P-value < 0.05`
+
+The pipeline exports:
+
+* Full High-CNV marker tables.
+* Filtered High-CNV marker tables.
+* Final unique marker-gene lists in CSV and TXT formats.
+
+### **13. Figure Generation**
+
+The workflow generates publication-ready figures, including:
+
+* Global t-SNE clusters.
+* Annotated cell-type t-SNE plot.
+* Canonical marker DotPlot.
+* Malignant epithelial subcluster t-SNE plot.
+* Initial CNV-score violin plot.
+* Refined inferCNV heatmap.
+* Refined CNV-score violin plot.
+* Combined multi-panel manuscript figure.
+
+All figures are exported at high resolution.
+
+## **Figure Reconstruction Scripts**
+
+Additional scripts are included for reconstructing publication-ready figures without rerunning the complete single-cell analysis.
+
+These scripts:
+
+* Load existing Seurat and malignant-cell RDS objects.
+* Reuse existing inferCNV output images.
+* Do not rerun QC, normalization, Harmony, clustering, inferCNV, or marker detection.
+* Generate standardized high-resolution PNG, TIFF, and PDF figures.
+* Improve label placement in t-SNE plots using non-overlapping labels.
+* Create enlarged and cropped inferCNV panels for manuscript preparation.
+
+## **Main Output Files**
+
+### **Figures**
+
+```text
+Figure_SC_01A_tSNE_global_clusters.png
+Figure_SC_01B_tSNE_final_celltypes_with_malignant.png
+Figure_SC_01C_DotPlot_celltype_markers.png
+Figure_SC_01D_tSNE_malignant_subclusters.png
+Figure_SC_01E_Initial_CNV_score_violin_for_reference_selection.png
+Figure_SC_01F_inferCNV.png
+Figure_SC_01G_Refined_CNV_score_violin_malignant_subclusters.png
+```
+
+### **Final High-CNV Marker Files**
+
+```text
+Final_High_CNV_Malignant_Genes.csv
+Final_High_CNV_Malignant_Gene_Names.csv
+Final_High_CNV_Malignant_Gene_Names.txt
+High_CNV_Malignant_Cluster_FindAllMarkers_after_lowCNV_removed_logFC1_all.csv
+```
+
+### **RDS Objects**
+
+```text
+FINAL_seurat_object_with_malignant_annotation.rds
+MALIGNANT_all_object_with_refined_CNV.rds
+HIGH_CNV_MALIGNANT_object_after_lowCNV_removal.rds
+HIGH_CNV_MALIGNANT_object_DE_fixed.rds
+```
+
+## **Notes**
+
+* Update all directory paths before running the script.
+* Ensure that the hg38 gene-order file is available before starting inferCNV analysis.
+* The figure-reconstruction scripts require previously generated RDS objects and inferCNV output files.
+* High-CNV marker genes are identified only after low-CNV malignant subclusters are removed.
