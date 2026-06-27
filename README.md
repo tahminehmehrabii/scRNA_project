@@ -12,7 +12,7 @@ To identify high-CNV malignant epithelial subpopulations and their marker genes 
 
 ## **Analysis Workflow**
 
-
+![LSCC Single-Cell RNA-seq Analysis and Refined inferCNV Pipeline](./images/Single-Cell%20RNA-seq%20and%20inferCNV%20Analysis%20Workflow%20for%20LSCC.png)
 
 ### **1. Environment Setup**
 
