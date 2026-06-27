@@ -30,7 +30,8 @@ ggrepel
 ```
 
 ## **Analysis Workflow**
-![LSCC scRNA-seq workflow](lscc_rna_seq_analysis_workflow_diagram.png)
+
+
 
 ### **1. Environment Setup**
 
