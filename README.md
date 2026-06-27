@@ -1,6 +1,6 @@
 # LSCC Single-Cell RNA-seq Analysis and Refined inferCNV Pipeline
 
-This repository contains an R-based single-cell RNA-seq workflow for the analysis of laryngeal squamous cell carcinoma (LSCC) samples from **GSE206332**. The pipeline integrates quality control, clustering, cell-type annotation, CNV-based malignant-cell identification, malignant subclustering, refined inferCNV analysis, and High-CNV marker discovery.
+To identify high-CNV malignant epithelial subpopulations and their marker genes in LSCC using integrated single-cell RNA-seq and inferCNV analysis.
 
 ## **Dataset**
 
@@ -9,25 +9,6 @@ This repository contains an R-based single-cell RNA-seq workflow for the analysi
 * **Disease:** Laryngeal squamous cell carcinoma (LSCC)
 * **Data type:** 10x Genomics single-cell RNA-seq data
 
-## **Required R Packages**
-
-The pipeline requires the following R packages:
-
-```r
-Seurat
-SeuratObject
-Matrix
-data.table
-dplyr
-ggplot2
-harmony
-infercnv
-patchwork
-pheatmap
-grid
-png
-ggrepel
-```
 
 ## **Analysis Workflow**
 
@@ -137,81 +118,24 @@ The remaining cells represent High-CNV malignant epithelial populations and are 
 
 Cluster-specific marker genes are identified among the remaining High-CNV malignant subclusters.
 
-Markers are retained using the following criteria:
 
-* `avg_log2FC ≥ 1`
-* `min.pct ≥ 0.25`
-* Adjusted `P-value < 0.05`
+## **Required R Packages**
 
-The pipeline exports:
+The pipeline requires the following R packages:
 
-* Full High-CNV marker tables.
-* Filtered High-CNV marker tables.
-* Final unique marker-gene lists in CSV and TXT formats.
-
-### **13. Figure Generation**
-
-The workflow generates publication-ready figures, including:
-
-* Global t-SNE clusters.
-* Annotated cell-type t-SNE plot.
-* Canonical marker DotPlot.
-* Malignant epithelial subcluster t-SNE plot.
-* Initial CNV-score violin plot.
-* Refined inferCNV heatmap.
-* Refined CNV-score violin plot.
-* Combined multi-panel manuscript figure.
-
-All figures are exported at high resolution.
-
-## **Figure Reconstruction Scripts**
-
-Additional scripts are included for reconstructing publication-ready figures without rerunning the complete single-cell analysis.
-
-These scripts:
-
-* Load existing Seurat and malignant-cell RDS objects.
-* Reuse existing inferCNV output images.
-* Do not rerun QC, normalization, Harmony, clustering, inferCNV, or marker detection.
-* Generate standardized high-resolution PNG, TIFF, and PDF figures.
-* Improve label placement in t-SNE plots using non-overlapping labels.
-* Create enlarged and cropped inferCNV panels for manuscript preparation.
-
-## **Main Output Files**
-
-### **Figures**
-
-```text
-Figure_SC_01A_tSNE_global_clusters.png
-Figure_SC_01B_tSNE_final_celltypes_with_malignant.png
-Figure_SC_01C_DotPlot_celltype_markers.png
-Figure_SC_01D_tSNE_malignant_subclusters.png
-Figure_SC_01E_Initial_CNV_score_violin_for_reference_selection.png
-Figure_SC_01F_inferCNV.png
-Figure_SC_01G_Refined_CNV_score_violin_malignant_subclusters.png
+```r
+Seurat
+SeuratObject
+Matrix
+data.table
+dplyr
+ggplot2
+harmony
+infercnv
+patchwork
+pheatmap
+grid
+png
+ggrepel
 ```
 
-### **Final High-CNV Marker Files**
-
-```text
-Final_High_CNV_Malignant_Genes.csv
-Final_High_CNV_Malignant_Gene_Names.csv
-Final_High_CNV_Malignant_Gene_Names.txt
-High_CNV_Malignant_Cluster_FindAllMarkers_after_lowCNV_removed_logFC1_all.csv
-```
-
-### **RDS Objects**
-
-```text
-FINAL_seurat_object_with_malignant_annotation.rds
-MALIGNANT_all_object_with_refined_CNV.rds
-HIGH_CNV_MALIGNANT_object_after_lowCNV_removal.rds
-HIGH_CNV_MALIGNANT_object_DE_fixed.rds
-```
-
-## **Notes**
-
-* Update all directory paths before running the script.
-* Ensure that the hg38 gene-order file is available before starting inferCNV analysis.
-* The figure-reconstruction scripts require previously generated RDS objects and inferCNV output files.
-* High-CNV marker genes are identified only after low-CNV malignant subclusters are removed.
